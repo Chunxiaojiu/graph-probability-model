@@ -134,3 +134,6 @@ $sigmod$ 层输出的数值在0-1之间，它描述了对于每一个组件它�
 [^1]:http://people.idsia.ch/~juergen/SeppHochreiter1991ThesisAdvisorSchmidhuber.pdf
 [^2]:http://www-dsi.ing.unifi.it/~paolo/ps/tnn-94-gradient.pdf
 [^3]:http://www.bioinf.jku.at/publications/older/2604.pdf
+
+
+
