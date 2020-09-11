@@ -13,4 +13,6 @@ $$
 $$\frac{\partial\phi}{\partial t} -k\frac{\partial^2\phi}{\partial x^2} = 0$$
 $$\frac{\partial\phi}{\partial t} - k\Delta\phi = 0$$
 
-其中$\Delta$就是我们熟悉的拉普拉斯算子。
+其中$\Delta$就是我们熟悉的拉普拉斯算子。接下来我们从一维图开始走向多维度,现在，我们依然考虑热传导模型，只是这个事情不发生在欧氏空间了，发生在一个Graph上面。这个图上的每个结点（Node）是一个单元，且这个单元只和与这个结点相连的单元，也就是有边（Edge）连接的单元发生热交换。例如下图中，结点1只和结点0、2、4发生热交换，更远的例如结点5的热量要通过4间接的传播过来而没有直接热交换。
+
+<img src = https://pic4.zhimg.com/80/v2-95364a51f5601bd3981458fd805942ee_720w.jpg>
