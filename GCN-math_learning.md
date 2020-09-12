@@ -137,7 +137,32 @@ $$\mathbf{x}^{T} L \mathbf{x}=\frac{1}{d} \sum_{\{u, v\} \in E}\left(x_{u}-x_{v}
 $$\lambda_{k}=\min _{S k-\text { dimensional subspace of } \mathbb{R}^{n}} \max _{\mathbf{x} \in S-\{0\}} \frac{\sum_{\{u, v\} \in E}\left(x_{u}-x_{v}\right)^{2}}{d \sum_{v} x_{v}^{2}}$$
 
 那此时$\lambda_k = 0$显然代表着在图中找到$A_k$集合，满足所有点都属于同一个类，形成一个完美的孤岛，因此，**laplace矩阵特征值为0的个数就是连通区域的个数**。此外，在真实场景中可能不存在特征值为0的孤岛（因为每个人或多或少都会跟人有联系），但是当特征值很小的时候，也能反应出某种“孤岛”，或者称为，bottleneck，这种bottleneck显然是由第二小的特征值决定的（因为特征值为0就是真正孤岛，但第二小就是有一点点边，但还是连通的），因此，很多发现社交社群的算法都会或多或少利用利用这一点，因为不同的社群肯定是内部大量边，但是社群之间的边很少，从而形成bottlenect。
-定理: 设G为无向图, A为G的邻接矩阵, $\quad \widehat{\curlyvee} L=I-\frac{1}{d} A$ 为图G的标准化的laplace矩阵。设 $\lambda_{1} \leqslant \lambda_{2} \leqslant \ldots \lambda_{n},$ 为L的特征值, 大小按照递增排列，则:
+定理: 设G为无向图, A为G的邻接矩阵, 令$L=I-\frac{1}{d} A$ 为图G的标准化的laplace矩阵。设 $\lambda_{1} \leqslant \lambda_{2} \leqslant \ldots \lambda_{n},$ 为L的特征值, 大小按照递增排列，则:
 1. $\lambda_{1}=0$ 且 $\lambda_{n} \leqslant 2$
 2. $\lambda_{k}=0$ 当目仅当G至少k个连通区域（这意味着特征值为0的数量对应若连通区域的数量）。
-3. $\lambda_{n}=2$ 当目仅当至少有一个连通域是二分图。
+3. $\lambda_{n}=2$ 当目仅当至少有一个连通域是二分图。 
+
+到此我们将谱分解使用在了聚类算法上，但是我们的最终目标是实现图卷积网络，卷积要如何实现呢？
+？为了解决这个问题题，我们可以利用图上的傅里叶变换，再使用卷积定理，这样就可以通过两个傅里叶变换的乘积来表示这个卷积的操作。那么为了介绍图上的傅里叶变换，我接来下从最原始的傅里叶级数开始讲起。
+<img src = https://img-blog.csdnimg.cn/20190330233251671.gif>
+
+在将图的傅里叶变换之前，我们先介绍一下图信号是什么。我们在传统概率图中，考虑每个图上的结点都是一个*feature*，对应数据的每一列，但是图信号不一样，这里每个结点不是随机变量，相反它是一个object。也就是说，他描绘概率图下每个样本之间的图联系，可以理解为刻画了不满足$i.i.d$假设的一般情形。
+<img src = https://img-blog.csdnimg.cn/20190330234154754.png>
+
+在这里我们将每一个信息输入的点（*feature*）记为$f(i)$,$\mu_l(i)$记录为第l个特征向量的第i个分量。对应将其中一个输入用正交基打开如下：
+$$f(i)=\lambda_{1} u_{1}(i)+\cdots+\lambda_{l} u_{l}(i)+\cdots+\lambda_{N} u_{N}(i)$$
+
+而拉普拉斯矩阵根据之前的特征值分解，我们可以拆解成下面的形式：
+$$L=U\left(\begin{array}{ccc}
+\lambda_{1} & & \\
+& \ddots & \\
+& & \lambda_{n}
+\end{array}\right) U^{-1}$$
+
+在卷积网络中我们需要构建一个卷积核进行更新迭代，假定一个卷积核h与特征值相关联，用于迭代更新，则我们定义的网络卷积将变成如下形式：
+$$(f * h)_{G}=U\left(\begin{array}{ccc}
+\hat{h}\left(\lambda_{1}\right) & & \\
+& \ddots & \\
+& & \hat{h}\left(\lambda_{n}\right)
+\end{array}\right) U^{T} f = (f * h)_{G}=U\left(\left(U^{T} h\right) \odot\left(U^{T} f\right)\right)$$
+$\odot$表示Hadamard product（哈达马积），对于两个维度相同的向量矩阵张量进行对应位置的逐元素乘积运算。
