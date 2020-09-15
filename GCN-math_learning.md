@@ -166,3 +166,71 @@ $$(f * h)_{G}=U\left(\begin{array}{ccc}
 & & \hat{h}\left(\lambda_{n}\right)
 \end{array}\right) U^{T} f = (f * h)_{G}=U\left(\left(U^{T} h\right) \odot\left(U^{T} f\right)\right)$$
 $\odot$表示Hadamard product（哈达马积），对于两个维度相同的向量矩阵张量进行对应位置的逐元素乘积运算。
+
+### 二代升级版GCN
+截至到现在我们已经成功的理解了GCN初代的想法，但是初代存在着一些问题，比如计算量会随着数据的增加，feature的维度增加，以$O(n^2)$的复杂度增加，因为邻接矩阵求特征值并不是一件轻松的事，那我们由此就会想起数值计算中的一些方案，来简化运算。
+
+Gram-Schmidt 正交化 (orthogonalization) 是基礎線性代數最常採用的方法，包含兩個部分：
+1. 正交化：对于$i = 1,2, ... ,n$,由$x_1, ... ,x_i$的闲心组合产生$y_i$,使得$\{y_1,...,y_n\}$为一组正交向量集。
+2. 单位化：伸缩$\{y_1,...,y_n\}$的长度，将$y_i$替换成为单位向量$q_i = y_i/||y_i||$，最终得到一组单位正交基地$\{q_1,...,q_n\}$
+
+<center>
+<img src = https://ccjou.files.wordpress.com/2010/04/orthogonalization1r.jpg >
+<div>二维坐标下的向量正交化操作</div>
+<img src = https://ccjou.files.wordpress.com/2010/04/orthogonalization2r.jpg >
+<div>三维坐标下的向量正交化操作</div>
+</center>
+
+我们简单看一个三维正交化的计算：
+$$\begin{aligned}
+\mathbf{y}_{3} &=\mathbf{x}_{3}-Y\left(Y^{T} Y\right)^{-1} Y^{T} \mathbf{x}_{3} \\
+&=\mathbf{x}_{3}-\left[\begin{array}{cc}
+\mathbf{y}_{1} & \mathbf{y}_{2}
+\end{array}\right]\left[\begin{array}{cc}
+\mathbf{y}_{1}^{T} \mathbf{y}_{1} & 0 \\
+0 & \mathbf{y}_{2}^{T} \mathbf{y}_{2}
+\end{array}\right]^{-1}\left[\begin{array}{c}
+\mathbf{y}_{1}^{T} \\
+\mathbf{y}_{2}^{T}
+\end{array}\right] \mathbf{x}_{3} \\
+&=\mathbf{x}_{3}-\left(\frac{\mathbf{y}_{1} \mathbf{y}_{1}^{T}}{\mathbf{y}_{1}^{T} \mathbf{y}_{1}}+\frac{\mathbf{y}_{2} \mathbf{y}_{2}^{T}}{\mathbf{y}_{2}^{T} \mathbf{y}_{2}}\right) \mathbf{x}_{3}
+\end{aligned}$$
+
+既然我们可以将正交化的新基底$y_i$表示为旧基底$x_1,\ldots,x_i$的**线性组合（注意）**
+$$\begin{aligned}
+\mathbf{x}_{1} &=\mathbf{y}_{1} \\
+\mathbf{x}_{2} &=\frac{\mathbf{y}_{1}^{T} \mathbf{x}_{2}}{\mathbf{y}_{1}^{T} \mathbf{y}_{1}} \mathbf{y}_{1}+\mathbf{y}_{2} \\
+\mathbf{x}_{3} &=\frac{\mathbf{y}_{1}^{T} \mathbf{x}_{3}}{\mathbf{y}_{1}^{T} \mathbf{y}_{1}} \mathbf{y}_{1}+\frac{\mathbf{y}_{2}^{T} \mathbf{x}_{3}}{\mathbf{y}_{2}^{T} \mathbf{y}_{2}} \mathbf{y}_{2}+\mathbf{y}_{3}
+\end{aligned}$$
+
+此时再设定一下单位化正交基底$q_i = y_i/||y_i||$,我们可以将上面公式写成如下形式：
+$$\begin{array}{l}
+\mathbf{x}_{1}=r_{11} \mathbf{q}_{1} \\
+\mathbf{x}_{2}=r_{12} \mathbf{q}_{1}+r_{22} \mathbf{q}_{2} \\
+\mathbf{x}_{3}=r_{13} \mathbf{q}_{1}+r_{23} \mathbf{q}_{2}+r_{33} \mathbf{q}_{3}
+\end{array}$$
+
+写成这样有一些好处：$\mathbf{eg:}\mathbf{q}_{2}^{T} \mathbf{x}_{3}=\mathbf{q}_{2}^{T}\left(r_{13} \mathbf{q}_{1}+r_{23} \mathbf{q}_{2}+r_{33} \mathbf{q}_{3}\right)=r_{23} \mathbf{q}_{2}^{T} \mathbf{q}_{2}=r_{23}$
+将前面说的写成矩阵模式就可以得到著名的 QR 分解式:
+$$
+\begin{aligned}
+A &=\left[\begin{array}{lll}
+\mathbf{x}_{1} & \mathbf{x}_{2} & \mathbf{x}_{3}
+\end{array}\right] \\
+&=\left[\begin{array}{lll}
+\mathbf{q}_{1} & \mathbf{q}_{2} & \mathbf{q}_{3}
+\end{array}\right]\left[\begin{array}{ccc}
+r_{11} & r_{12} & r_{13} \\
+0 & r_{22} & r_{23} \\
+0 & 0 & r_{33}
+\end{array}\right] \\
+&=\left[\begin{array}{lll}
+\mathbf{q}_{1} & \mathbf{q}_{2} & \mathbf{q}_{3}
+\end{array}\right]\left[\begin{array}{ccc}
+\mathbf{q}_{1}^{T} \mathbf{x}_{1} & \mathbf{q}_{1}^{T} \mathbf{x}_{2} & \mathbf{q}_{1}^{T} \mathbf{x}_{3} \\
+0 & \mathbf{q}_{2}^{T} \mathbf{x}_{2} & \mathbf{q}_{2}^{T} \mathbf{x}_{3} \\
+0 & 0 & \mathbf{q}_{3}^{T} \mathbf{x}_{3}
+\end{array}\right] \\
+&=Q R
+\end{aligned}
+$$
