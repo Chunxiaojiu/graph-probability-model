@@ -247,3 +247,28 @@ $$\min_x||Ax-b||^2$$
 $$\mathbf{K}_r(A,b) = span\{b,Ab,\dotsc,A^{r-1}b\}$$
 
 
+第二代GCN中最大的进步在于提出了 Chebyshev expansion来近似求解，大大降低了计算的复杂度，我们可以从论文中简单的分析一下思路，我们通过第一代GCN中：
+$$(f * h)_{G}=U\left(\begin{array}{ccc}
+\hat{h}\left(\lambda_{1}\right) & & \\
+& \ddots & \\
+& & \hat{h}\left(\lambda_{n}\right)
+\end{array}\right) U^{T} f = (f * h)_{G}=U\left(\left(U^{T} h\right) \odot\left(U^{T} f\right)\right)$$
+
+可以发现我们的函数$h(\lambda)$是作为我们主要学习的参数方程，我们将其采用多项式的方式改写成如下形式方便我们进行分析：
+$$h_\theta(\Lambda) = \sum ^{K-1}_{k = 0} \theta_k \Lambda^k$$
+这里比较难理解的在$\Lambda^k$这里对应的就是k步之后的还指向该结点的拉普拉斯矩阵。但是现在的复杂度变得难以忍受了，我们需要想办法简化这里的计算，通常我们有两种方式进行简化
+1. 采用切比雪夫多项式逼近
+2. 采用兰科斯算法，该算法对应的结构中需要建立Krylov 子空间，由于使用这种方法我们可以做到系数独立，并且在计算特征值的时候可以简化运算，采用后续我们讲到的一些方式，但是还是计算较为复杂。
+
+首先介绍一下切比雪夫多项式$T_k(x) = 2xT_{k-1}(x) - T_{k-2}(x)$
+
+我们使用切比雪夫多项式来对其中的卷积核进行替换
+$$
+h_\theta(\Lambda) = \sum ^{K-1}_{k = 0} \theta_k T_k( \tilde{\Lambda})
+$$
+在如上形式生成后，我们观察一下式子中改动的地方，首先是$\tilde{\Lambda} = 2\Lambda / \lambda_{max} - I_n$这里主要对应着切比雪夫中的值域要求，很自然的可以写出切比雪夫的近似逼近：
+$$T_k(\tilde{\Lambda}) = 2\tilde{\Lambda}T_{k-1}(\tilde{\Lambda})-T_{k-2}(\tilde{\Lambda})  \\w.t \quad T_0(\tilde{\Lambda}) = x\\ \quad T_1(\tilde{\Lambda}) = \tilde{\Lambda}x $$
+
+所以最开始的卷积经过上诉操作之后降低了一级数。
+
+
